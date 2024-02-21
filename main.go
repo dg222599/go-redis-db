@@ -3,72 +3,56 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/dg222599/go-redis-db/command"
+	"github.com/dg222599/go-redis-db/db"
 )
 
 type txnObject struct {
-	dbName string
+	DBName string
 	PORT int64
 
 }
-
-
-
 func main(){
 	
 	fmt.Print("\n\n====****    Welcome to Redis DB     ****=====\n\n")
+	
+	// got the PORT where db needs to be run and dbName for the DB
 	portNumber,dbName:=InitialMessage()
 
-	currentTxn := &txnObject{dbName:dbName,PORT:portNumber}
-	
-	currentTxn.HandleCommand()
-	
-	
-	
-     
-}
+	fmt.Println(portNumber)
 
-func (currentTxn *txnObject) HandleCommand(){
-	fmt.Println("Enter the Command - please enter in this format--> SET key value")
-	reader := bufio.NewReader(os.Stdin)
-	line,err := reader.ReadString('\n')
-	if err!=nil{
-		log.Fatal(err.Error())
+	//currentTxn := &txnObject{dbName:dbName,PORT:portNumber}
+
+	
+    // Creating a new DB instance for that DB name
+	dbInstance,err := db.CreateDB(dbName)
+	if err != nil {
+		fmt.Println(err.Error())
 	}
+	
+	// taking and handling the user commands until exit
+	c:=make(chan os.Signal,1)
+	signal.Notify(c,syscall.SIGINT,syscall.SIGTERM)
+	go func(){
+		<-c
+		LastMessage()
+		//os.Exit(1)
+		
+	}()
 
-	validationStatus,_:=ValidateCommand(line)
-
-	if validationStatus == false {
-		fmt.Println("InValid Command format ...pls enter again")
-		currentTxn.HandleCommand()
+	for {
+		command.HandleCommand(dbInstance)
 	}
-
-
-}
-
-func ValidateCommand(cmdLine string) (bool,error){
-    cmdArgs := strings.Split(cmdLine," ")
-
-	if len(cmdArgs) < 1 {
-		fmt.Println("You have entered empty command...please enter again ")
-		return false,nil
-	}
-
-    userCmd := command.InitCommand()
-
-	fmt.Println(userCmd.Name)
-
-	fmt.Println(userCmd)
-
-	return true,nil
 	
 }
 
+// to get the inital details for PORT and DB name
 func InitialMessage() (int64,string) {
 	var PORT int
 	var dbName string
@@ -95,6 +79,8 @@ func InitialMessage() (int64,string) {
 		
 	}
 
+	//also add option for the user to stop the app anytime
+
 	
 
 	dbName =  args[1]
@@ -103,3 +89,9 @@ func InitialMessage() (int64,string) {
 
 	return int64(PORT),dbName
 }
+
+func LastMessage() {
+	fmt.Println("It seems you have terminated the operations...bye!!")
+	os.Exit(1)
+}
+
