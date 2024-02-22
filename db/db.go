@@ -19,14 +19,12 @@ func CreateDB(dbname string) (*DB, error) {
 }
 
 func (db *DB) Show() {
-	fmt.Println("Here is the whole DB!!")
+	fmt.Printf("Here is the whole DB!!\n\n")
 	fmt.Println("DB Name is-->",db.DBName)
 	fmt.Println("DB Storage is-->",db.DBStorage)
 }
 
-func (db *DB) Set(key string,value string) {
-	//setted the DB key
-	fmt.Println(db)
+func (db *DB) Set(key string,value interface{}) {
 	db.DBStorage[key] = value
 } 
 
@@ -40,7 +38,12 @@ func (db *DB) Get(key string) (interface{}) {
 	return value
 }
 
-func (db *DB) Delete(key string) {
+func (db *DB) Delete(key string) (int) {
+	_,ok := db.DBStorage[key]
+	if !ok{
+		return 0
+	}
 	delete(db.DBStorage,key)
-	
+	return 1
+
 }

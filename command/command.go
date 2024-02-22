@@ -36,27 +36,49 @@ func InitCommand() Command {
 	return initialCmd
 }
 
-func ValidateCommand(cmdLine string) (bool,[]string,error){
-    cmdArgs := strings.Split(cmdLine," ")
-
-	if len(cmdArgs) < 1 {
-		fmt.Println("You have entered empty command...please enter again ")
-		return false,[]string{},nil
-	}
-
-	//trim whitespaces in the cmdArgs
-
+func ValidateCommand(cmdLine string) (bool,Command){
+    cmdArgs := strings.Fields(cmdLine)
 	totalArgs := len(cmdArgs)
-
-	for i:=0;i<totalArgs ;i++ {
-		cmdArgs[i] = strings.TrimSpace(cmdArgs[i])
+	if totalArgs < 1 {
+		fmt.Println("You have entered empty command...please enter again ")
+		return false,Command{}
+	}
+	currentCmd:=Command{
+		Name : strings.TrimSpace(cmdArgs[0]) ,
+		Key : "" , 
+		Value : nil,
 	}
 
-    // to add proper validation for all the command types
-
+	switch currentCmd.Name {
+		case SET:
+			if totalArgs <=2 {
+				fmt.Println("All the arguments are not provided need -> SET key value")
+				return false,Command{}
+			}
+			currentCmd.Key  = strings.TrimSpace(cmdArgs[1])
+			currentCmd.Value = strings.TrimSpace(strings.Join(cmdArgs[2:]," "))
+		case GET:
+			if totalArgs!=2{
+				fmt.Println("Key not present in the command , need --> GET key")
+				return false,Command{}
+			}
+			currentCmd.Key = strings.TrimSpace(cmdArgs[1])
+		case DEL:
+			if totalArgs!=2{
+				fmt.Println("Key not present in the command , need --> DEL key")
+				return false,Command{}
+			}
+			currentCmd.Key = strings.TrimSpace(cmdArgs[1])
+		case SHOW:
+			if totalArgs !=1{
+				fmt.Println("SHOW command is in wrong format  , just enter --> SHOW")
+				return false,Command{}
+			}
+		default:
+			fmt.Println("Other commands ...so frepass!!")
+	}
 	
-
-	return true,cmdArgs,nil
+	return true,currentCmd
 }
 
 func  HandleCommand(dbInstance *db.DB) {
@@ -67,7 +89,7 @@ func  HandleCommand(dbInstance *db.DB) {
 		log.Fatal(err.Error())
 	}
 
-	validationStatus,cmdArgs, _ := ValidateCommand(line)
+	validationStatus,currentCmd := ValidateCommand(line)
 
 
 
@@ -76,21 +98,20 @@ func  HandleCommand(dbInstance *db.DB) {
 		HandleCommand(dbInstance)
 	} else {
 
-		fmt.Println("Congrats the command is verified!!~")
+		//fmt.Println("Congrats the command is verified!!~")
 		
-		switch cmdArgs[0] {
+		switch currentCmd.Name {
 		case SET:
-			dbInstance.Set(cmdArgs[1],cmdArgs[2])
+			dbInstance.Set(currentCmd.Key,currentCmd.Value)
 		case GET:
-			value:=dbInstance.Get(cmdArgs[1])
+			value:=dbInstance.Get(currentCmd.Key)
 			if value== nil {
-				fmt.Println("There is no key present with this name!!")
-				
+				fmt.Println("Key does not exist!!")
 			} else {
-				fmt.Println(value)
+				fmt.Println("Value for key is -->",value)
 			}
 		case DEL:
-			dbInstance.Delete(cmdArgs[1])
+			dbInstance.Delete(currentCmd.Key)
 		case SHOW:
 			fmt.Println("You have asked to see the whole DB")
 			dbInstance.Show()

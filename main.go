@@ -23,7 +23,7 @@ func main(){
 	fmt.Print("\n\n====****    Welcome to Redis DB     ****=====\n\n")
 	
 	// got the PORT where db needs to be run and dbName for the DB
-	portNumber,dbName:=InitialMessage()
+	portNumber,dbName:=InitialInput()
 
 	fmt.Println(portNumber)
 
@@ -53,7 +53,7 @@ func main(){
 }
 
 // to get the inital details for PORT and DB name
-func InitialMessage() (int64,string) {
+func InitialInput() (int64,string) {
 	var PORT int
 	var dbName string
 	var err error
@@ -63,19 +63,23 @@ func InitialMessage() (int64,string) {
 	
 	reader := bufio.NewReader(os.Stdin)
 	line,err := reader.ReadString('\n')
+	if err!=nil{
+		fmt.Println("Error in reading line ...please try again")
+		InitialInput()
+	}
     
 	args := strings.Split(line, " ")
     
 	if len(args) !=2 {
 		fmt.Println("Please enter both the PORT number and db Name")
-		InitialMessage()
+		InitialInput()
 	}
 
 	PORT,err = strconv.Atoi(args[0])
 	if err!=nil{
 		fmt.Println("Error in Port Number format--> , PLease enter again correctly")
 		fmt.Println(err.Error())
-		InitialMessage()
+		InitialInput()
 		
 	}
 
