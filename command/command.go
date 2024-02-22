@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"strings"
 
@@ -16,6 +17,7 @@ const (
 	GET = "GET"
 	ALTER = "ALTER"
 	INCR = "INCR"
+	INCRBY = "INCRBY"
 	DEL = "DEL"
 	SHOW = "SHOW"
 	
@@ -74,6 +76,24 @@ func ValidateCommand(cmdLine string) (bool,Command){
 				fmt.Println("SHOW command is in wrong format  , just enter --> SHOW")
 				return false,Command{}
 			}
+		case INCR:
+			if totalArgs!=2{
+				fmt.Println("INCR command is in wrong format , just enter INCR key")
+				return false,Command{}
+			}
+			currentCmd.Key = strings.TrimSpace(cmdArgs[1])
+		case INCRBY:
+			if totalArgs!=3{
+				fmt.Println("INCRBY command is in wrong format , just enter INCRBY key counter")
+					return false,Command{}	 
+			}
+			_,err := strconv.Atoi(cmdArgs[2])
+			if err!=nil {
+				fmt.Println("error , counter is not in Int format")
+				return false,Command{}
+			}
+			currentCmd.Key = strings.TrimSpace(cmdArgs[1])
+			currentCmd.Value = cmdArgs[2]
 		default:
 			fmt.Println("Other commands ...so frepass!!")
 	}
@@ -115,6 +135,22 @@ func  HandleCommand(dbInstance *db.DB) {
 		case SHOW:
 			fmt.Println("You have asked to see the whole DB")
 			dbInstance.Show()
+		case INCR:
+			value,err:=dbInstance.Increment(currentCmd.Key,1)
+			if err!=nil{
+				fmt.Println(err.Error())
+				HandleCommand(dbInstance)
+			} else {
+				fmt.Println(value)
+			}
+		case INCRBY:
+			value,err:=dbInstance.Increment(currentCmd.Key,currentCmd.Value.(int))
+			if err!=nil{
+				fmt.Println(err.Error())
+				HandleCommand(dbInstance)
+			} else {
+				fmt.Println(value)
+			}
 		default:
 			fmt.Println("We are printing the default command!!")
 		}

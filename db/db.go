@@ -1,7 +1,9 @@
 package db
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 )
 type DB struct {
 	DBName    string
@@ -46,4 +48,42 @@ func (db *DB) Delete(key string) (int) {
 	delete(db.DBStorage,key)
 	return 1
 
+}
+
+func (db *DB) Increment(key string ,byCount int) (int,error){
+
+	
+	value,ok := db.DBStorage[key]
+	
+	if !ok{
+		return 0,errors.New("key does not exist")
+	}
+    ok = false
+	
+	switch temp:=value.(type) {
+		case int:
+			ok = true
+			fmt.Println(temp)
+		default:
+			ok = false
+			
+	}
+	
+	// value,_  = value.(int)
+	// value = string(value)
+	// intValue,ok := strconv.Atoi(value)
+	if !ok{
+		fmt.Println(value)
+		fmt.Println(reflect.TypeOf(value))
+		return 0,errors.New("value of the key is not of Int type , can not increment")
+	}
+
+	intValue,_ := value.(int)
+
+	
+	intValue+=byCount
+
+	db.DBStorage[key] = intValue
+
+	return intValue,nil
 }
