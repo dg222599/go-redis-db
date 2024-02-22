@@ -44,7 +44,17 @@ func ValidateCommand(cmdLine string) (bool,[]string,error){
 		return false,[]string{},nil
 	}
 
+	//trim whitespaces in the cmdArgs
+
+	totalArgs := len(cmdArgs)
+
+	for i:=0;i<totalArgs ;i++ {
+		cmdArgs[i] = strings.TrimSpace(cmdArgs[i])
+	}
+
     // to add proper validation for all the command types
+
+	
 
 	return true,cmdArgs,nil
 }
@@ -67,18 +77,20 @@ func  HandleCommand(dbInstance *db.DB) {
 	} else {
 
 		fmt.Println("Congrats the command is verified!!~")
-		fmt.Println(cmdArgs)
+		
 		switch cmdArgs[0] {
 		case SET:
-			fmt.Println("It is a SET command")
 			dbInstance.Set(cmdArgs[1],cmdArgs[2])
-			fmt.Println(*&(dbInstance).DBStorage)
 		case GET:
-			fmt.Println("It is a GET command")
 			value:=dbInstance.Get(cmdArgs[1])
-			fmt.Println(value)
+			if value== nil {
+				fmt.Println("There is no key present with this name!!")
+				
+			} else {
+				fmt.Println(value)
+			}
 		case DEL:
-			fmt.Println("it is a DELETE command")
+			dbInstance.Delete(cmdArgs[1])
 		case SHOW:
 			fmt.Println("You have asked to see the whole DB")
 			dbInstance.Show()

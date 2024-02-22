@@ -13,7 +13,7 @@ import (
 	"github.com/dg222599/go-redis-db/db"
 )
 
-type txnObject struct {
+type TxnObject struct {
 	DBName string
 	PORT int64
 
