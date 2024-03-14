@@ -7,16 +7,16 @@ import (
 const (
 	SET = "SET"
 	GET = "GET"
-	ALTER = "ALTER"
 	INCR = "INCR"
 	INCRBY = "INCRBY"
 	DEL = "DEL"
-	SHOW = "SHOW"
 	MULTI = "MULTI"
 	EXEC = "EXEC"
 	DISCARD = "DISCARD"
 	SELECT = "SELECT"
 	HELP = "HELP"
+	COMPACT = "COMPACT"
+	EXIT = "EXIT"
 	
 )
 
@@ -61,6 +61,9 @@ func (cmd Command) IsEndCommand() bool {
 func (cmd Command) ValidateCommand() (bool,error){
     switch cmd.Name {
 	case SET,INCRBY:
+		fmt.Println(cmd.Name)
+		fmt.Println(cmd.Key)
+		fmt.Println(cmd.Value)
 		tempCmd:="set"
 		if cmd.Name == "INCRBY" {
 			tempCmd = "incrby"
@@ -89,7 +92,7 @@ func (cmd Command) ValidateCommand() (bool,error){
 			return false,fmt.Errorf("(error)-ERR in the cmd-> %s...looks like the key is missing",tempCmd)
 		}
 		return true,nil
-	case MULTI,EXEC,DISCARD,SHOW,HELP:
+	case MULTI,EXEC,DISCARD,HELP,COMPACT,EXIT:
 		return true,nil
 	}
 

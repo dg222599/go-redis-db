@@ -1,12 +1,16 @@
 package command
 
-import "github.com/dg222599/go-redis-db/db"
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/dg222599/go-redis-db/db"
+)
 
 type DBOperation struct {
 	db db.DB
 	runningMultiTxn bool
 	cmds []Command
-
 }
 
 func NewDBOperation(db db.DB) DBOperation {
@@ -48,6 +52,12 @@ func (dbOP *DBOperation) Execute(dbIdx int,cmd Command) (int,interface{}) {
 			dbOP.runningMultiTxn = false
 			return dbIdx,dbOP.executeMulti(dbIdx)
 		case COMPACT:
+			var results []interface{}
+			
+			for keyValPair := range dbOP.db.Show(dbIdx) {
+				results = append(results, fmt.Sprintf("SET %s ",keyValPair))
+			}
+			return dbIdx,results
 
 		case SET:
 			dbOP.db.Set(dbIdx,cmd.Key,cmd.Value)
@@ -57,11 +67,64 @@ func (dbOP *DBOperation) Execute(dbIdx int,cmd Command) (int,interface{}) {
 		case DEL:
 			return dbIdx,dbOP.db.Del(dbIdx,cmd.Key)
 		case INCR:
-			v:=
+			value:=dbOP.db.Get(dbIdx,cmd.Key)
+			if value == nil {
+				newValue := "1"
+				dbOP.db.Set(dbIdx,cmd.Key,newValue)
+				return dbIdx,newValue
 
+			}
+
+			currValue,err := strconv.Atoi(value.(string))
+			if err!=nil{
+				return dbIdx , fmt.Errorf("(error) value is not an intger or out of range")
+
+			}
+
+			newValue := fmt.Sprintf("%v",currValue+1)
+			dbOP.db.Set(dbIdx,cmd.Key , newValue)
+			return dbIdx,newValue
+		case INCRBY:
+			value:=dbOP.db.Get(dbIdx,cmd.Key)
+			if value == nil {
+				newValue:=cmd.Value
+				dbOP.db.Set(dbIdx,cmd.Key,newValue)
+				return dbIdx,newValue
+			}
+
+			currValue,err := strconv.Atoi(value.(string))
+			if err!=nil{
+				return dbIdx,fmt.Errorf("(error) - current value is not an intger or out of range")
+			}
+
+			newValue,err := strconv.Atoi(cmd.Value.(string))
+			if err!=nil{
+				return dbIdx,fmt.Errorf("(error)  - new value is not an intger or out of range")
+			}
+
+			finalValue := fmt.Sprintf("%v",currValue + newValue)
 			
+			dbOP.db.Set(dbIdx,cmd.Key,finalValue)
+			return dbIdx,finalValue
+		case HELP,EXIT:
+			return dbIdx,""
+		}
 
-
-	  }
+		return dbIdx, fmt.Errorf("(error) - Error unknown command  '%s' ",cmd.Key)
 }
+
+func (dbOP *DBOperation) executeMulti(dbIdx int) interface{} {
+	 		var results []interface{}
+
+			for _,cmd := range dbOP.cmds {
+				_,result := dbOP.Execute(dbIdx,cmd)
+				results = append(results, result)
+			}
+
+			dbOP.cmds = nil
+
+			return results
+}
+
+
 

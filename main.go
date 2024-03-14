@@ -15,11 +15,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type TxnObject struct {
-	DBName string
-	PORT int64
-
-}
 func main(){
 
 	HandleTermination()
@@ -72,22 +67,33 @@ func HandleNewConnection(conn net.Conn ,operationDB command.DBOperation) {
 
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
-	
+	dbIdx:=0
+
 	for {
+		if dbIdx > 0 {
+			fmt.Fprintf(writer, "[%d]$", dbIdx)
+		} else {
+			fmt.Fprintf(writer, "$")
+		}
 		writer.Flush()
 
 		//Get Input from the User
 		command,err := TakeCommand(reader)
 		if err!=nil{
 			showResult(writer,err)
-			break
+			
+		}
+
+		if command.Name == "HELP" {
+			showAllCommands(writer)
+		} else if command.Name == "EXIT" {
+			fmt.Fprintf(writer,"It seems you have terminated the operations...bye!!")
+			os.Exit(1)
 		}
 
 		var result interface{}
-		result  =  command.Execute(command)
+		dbIdx,result  =  operationDB.Execute(dbIdx,command)
 		showResult(writer,result)
-
-
 	}
 }
 
@@ -122,10 +128,11 @@ func TakeCommand(reader *bufio.Reader) (command.Command , error) {
 				args = append(args,strings.ReplaceAll(strings.TrimSpace(currWord),`"`,""))
 				completeWord = ""
 				longArgs = false
-				qoutesEnded = false
+				qoutesEnded = true
 				count++
 
-			} }else {
+			} 
+		} else {
 				args = append(args,strings.ReplaceAll(currWord,`"`,""))
 				count++
 			}
@@ -136,13 +143,15 @@ func TakeCommand(reader *bufio.Reader) (command.Command , error) {
 		}
 
 		if !qoutesEnded {
-			return command.Command{},fmt.Errorf("Wrong format error - unbalanced Qoutes in args")
+			return command.Command{},fmt.Errorf("wrong format error - unbalanced qoutes in args")
 
 		}
 
 		cmdName:= strings.ToUpper(strings.TrimSpace(args[0].(string)))
 
-		return command.NewCommand(cmdName),nil
+		command := command.NewCommand(cmdName,args[1:]...)
+
+		return command,nil
 
 		
 }
@@ -166,13 +175,26 @@ func HandleTermination() {
 	signal.Notify(c,syscall.SIGINT,syscall.SIGTERM)
 	go func(){
 		<-c
-		LastMessage()
-		
-		
+		fmt.Println("It seems you have terminated the operations...bye!!")
+		os.Exit(1)
 	}()
 }
-func LastMessage() {
-	fmt.Println("It seems you have terminated the operations...bye!!")
-	os.Exit(1)
+
+func showAllCommands(writer *bufio.Writer) {
+	//printing all the available commands using this
+	fmt.Fprintf(writer,"\n\n** Commands directory **\n")
+	fmt.Fprintf(writer,"[1] - SET key value\n")
+	fmt.Fprintf(writer,"[2] - GET key\n")
+	fmt.Fprintf(writer,"[3] - DEL key\n")
+	fmt.Fprintf(writer,"[4] - INCR key\n")
+	fmt.Fprintf(writer,"[5] - INCRBY key value\n")
+	fmt.Fprintf(writer,"[6] - COMPACT\n")
+	fmt.Fprintf(writer,"[7] - MULTI\n")
+	fmt.Fprintf(writer,"[8] - EXEC\n")
+	fmt.Fprintf(writer,"[9] - DISCARD\n")
+	fmt.Fprintf(writer,"[10] - EXEC\n")
+	fmt.Fprintf(writer,"[11] - SELECT db-number\n")
+	fmt.Fprintf(writer,"[12] - HELP\n\n")
 }
+
 
