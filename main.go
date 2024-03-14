@@ -3,14 +3,16 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/dg222599/go-redis-db/command"
 	"github.com/dg222599/go-redis-db/db"
+	"github.com/joho/godotenv"
 )
 
 type TxnObject struct {
@@ -19,81 +21,156 @@ type TxnObject struct {
 
 }
 func main(){
+
+	HandleTermination()
 	
 	fmt.Print("\n\n====****    Welcome to Redis DB     ****=====\n\n")
-	
-	// got the PORT where db needs to be run and dbName for the DB
-	portNumber,dbName:=InitialInput()
 
-	fmt.Println(portNumber)
-
-	//currentTxn := &txnObject{dbName:dbName,PORT:portNumber}
-
-	
-    // Creating a new DB instance for that DB name
-	dbInstance,err := db.CreateDB(dbName)
-	if err != nil {
-		fmt.Println(err.Error())
+	err:= godotenv.Load()
+	if err!=nil{
+		log.Fatal(err.Error())
 	}
+
+	dbCount := os.Getenv("DB_COUNT")
+	dbInstance:= db.CreateDB(dbCount)
 	
-	// taking and handling the user commands until exit
+
+	newOperationDB := command.NewDBOperation(dbInstance)
+
+	server,err := StartTCPServer(fmt.Sprintf(":%s",os.Getenv("APP_PORT")))
+	if err!=nil{
+		log.Fatalf("Failed to start the TCP instance!!")
+	}
+
+	defer server.Close()
+
+	for {
+		conn,err := server.Accept()
+		if err!=nil{
+			fmt.Printf("Failed to accept connection: %v\n",err)
+			continue
+		}
+
+		go HandleNewConnection(conn,newOperationDB)
+
+	}
+
+}
+
+func StartTCPServer(port string) (net.Listener , error) {
+	server,err := net.Listen("tcp",port)
+	if err!=nil{
+		return nil,err
+	}
+
+	fmt.Println("Server started on PORT:",port)
+	return server,nil
+}
+
+func HandleNewConnection(conn net.Conn ,operationDB command.DBOperation) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+	writer := bufio.NewWriter(conn)
+	
+	for {
+		writer.Flush()
+
+		//Get Input from the User
+		command,err := TakeCommand(reader)
+		if err!=nil{
+			showResult(writer,err)
+			break
+		}
+
+		var result interface{}
+		result  =  command.Execute(command)
+		showResult(writer,result)
+
+
+	}
+}
+
+func TakeCommand(reader *bufio.Reader) (command.Command , error) {
+	line,err := reader.ReadString('\n')
+	if err!=nil{
+		return command.Command{},err
+	}
+
+	line = strings.TrimSpace(line)
+
+	words := strings.Split(line," ")
+
+	args := make([]interface{},0,10)
+
+	count:=0
+	longArgs := false
+	qoutesEnded := true
+
+	completeWord:= ""
+	for _,currWord := range words {
+		
+		if strings.HasPrefix(currWord,`"`) {
+			longArgs = true
+			qoutesEnded = false
+		}
+
+		if longArgs {
+			completeWord = fmt.Sprintf("%s %s",completeWord,currWord)
+
+			if strings.HasSuffix(currWord,`"`) {
+				args = append(args,strings.ReplaceAll(strings.TrimSpace(currWord),`"`,""))
+				completeWord = ""
+				longArgs = false
+				qoutesEnded = false
+				count++
+
+			} }else {
+				args = append(args,strings.ReplaceAll(currWord,`"`,""))
+				count++
+			}
+		}
+
+		if count<1{
+			return command.Command{},fmt.Errorf("empty command")
+		}
+
+		if !qoutesEnded {
+			return command.Command{},fmt.Errorf("Wrong format error - unbalanced Qoutes in args")
+
+		}
+
+		cmdName:= strings.ToUpper(strings.TrimSpace(args[0].(string)))
+
+		return command.NewCommand(cmdName),nil
+
+		
+}
+
+func showResult(writer *bufio.Writer,result interface{}) {
+	switch res:=result.(type) {
+	case []interface{}:
+		for i,item := range res {
+			fmt.Fprintf(writer,"%d) %v\n",i+1,item)
+		}
+	default:
+		fmt.Fprintf(writer,"%v\n",result)
+	}
+	writer.Flush()
+}
+
+func HandleTermination() {
+
+	// Terminating the Redis Client in case of CTRL + C
 	c:=make(chan os.Signal,1)
 	signal.Notify(c,syscall.SIGINT,syscall.SIGTERM)
 	go func(){
 		<-c
 		LastMessage()
-		//os.Exit(1)
+		
 		
 	}()
-
-	for {
-		command.HandleCommand(dbInstance)
-	}
-	
 }
-
-// to get the inital details for PORT and DB name
-func InitialInput() (int64,string) {
-	var PORT int
-	var dbName string
-	var err error
-
-	
-	fmt.Println("Please enter the PORT , DB name from which you want to connect to DB server , ex - 6379 root")
-	
-	reader := bufio.NewReader(os.Stdin)
-	line,err := reader.ReadString('\n')
-	if err!=nil{
-		fmt.Println("Error in reading line ...please try again")
-		InitialInput()
-	}
-    
-	args := strings.Split(line, " ")
-    
-	if len(args) !=2 {
-		fmt.Println("Please enter both the PORT number and db Name")
-		InitialInput()
-	}
-
-	PORT,err = strconv.Atoi(args[0])
-	if err!=nil{
-		fmt.Println("Error in Port Number format--> , PLease enter again correctly")
-		fmt.Println(err.Error())
-		InitialInput()
-		
-	}
-
-	//also add option for the user to stop the app anytime
-
-	
-
-	dbName =  args[1]
-
-	//Connect from here only to the DB on Port
-
-	return int64(PORT),dbName
-}
-
 func LastMessage() {
 	fmt.Println("It seems you have terminated the operations...bye!!")
 	os.Exit(1)

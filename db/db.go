@@ -1,89 +1,80 @@
 package db
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
+	"strconv"
 )
 type DB struct {
-	DBName    string
-	DBStorage map[string]interface{}
+	DBCount int
+	DBStorage map[int]map[string]interface{}
 }
 
-func CreateDB(dbname string) (*DB, error) {
+func CreateDB(dbCountstr string) DB {
 	fmt.Println("This is inside the DB Package!!")
-	newDBInstance := &DB{
-		DBName:    dbname,
-		DBStorage: map[string]interface{}{},
+	dbCount,err := strconv.Atoi(dbCountstr)
+
+	if err!=nil{
+		dbCount = 16
 	}
 
-	return newDBInstance, nil
+	temp := make(map[int]map[string]interface{})
+
+	for i:=0 ; i<dbCount ; i++ {
+		temp[i] = make(map[string]interface{})
+
+	}
+
+	return DB{
+		DBCount: dbCount,
+		DBStorage: temp,
+	}
 }
 
-func (db *DB) Show() {
-	fmt.Printf("Here is the whole DB!!\n\n")
-	fmt.Println("DB Name is-->",db.DBName)
-	fmt.Println("DB Storage is-->",db.DBStorage)
+func (db DB) Select(dbIdxStr string) (int , error) {
+	dbIdx,err := strconv.Atoi(dbIdxStr)
+	if err!=nil{
+		return 0,fmt.Errorf("(error) - DB number is not an integer")
+	}
+	if dbIdx < 0 || dbIdx > db.DBCount - 1 {
+		return 0,fmt.Errorf("(error) - DB Index is out of range")
+	}
+
+	return dbIdx,nil
 }
 
-func (db *DB) Set(key string,value interface{}) {
-	db.DBStorage[key] = value
+func (db DB) Set(dbIdx int,key string ,value interface{}) {
+	dbInstance:= db.DBStorage[dbIdx]
+	dbInstance[key] = value
 } 
 
-func (db *DB) Get(key string) (interface{}) {
-
-	value,ok := db.DBStorage[key]
+func (db DB) Get(dbIdx int,key string) interface{}{
+	dbInstance:=db.DBStorage[dbIdx]
+	value,ok:=dbInstance[key]
 	if !ok{
-		 return nil
+		return nil
 	}
-
 	return value
 }
 
-func (db *DB) Delete(key string) (int) {
-	_,ok := db.DBStorage[key]
+func (db DB) Del(dbIdx int,key string) interface{}{
+	dbInstance:=db.DBStorage[dbIdx]
+	_,ok:=dbInstance[key]
 	if !ok{
 		return 0
 	}
-	delete(db.DBStorage,key)
+	delete(dbInstance,key)
 	return 1
-
 }
 
-func (db *DB) Increment(key string ,byCount int) (int,error){
-
+func (db DB) Show(dbIdx int) <-chan string{
+	resultChan := make(chan string)
 	
-	value,ok := db.DBStorage[key]
-	
-	if !ok{
-		return 0,errors.New("key does not exist")
-	}
-    ok = false
-	
-	switch temp:=value.(type) {
-		case int:
-			ok = true
-			fmt.Println(temp)
-		default:
-			ok = false
-			
-	}
-	
-	// value,_  = value.(int)
-	// value = string(value)
-	// intValue,ok := strconv.Atoi(value)
-	if !ok{
-		fmt.Println(value)
-		fmt.Println(reflect.TypeOf(value))
-		return 0,errors.New("value of the key is not of Int type , can not increment")
-	}
+	go func(){
+		for key,value := range db.DBStorage[dbIdx] {
+			resultChan <- fmt.Sprintf("`%s` -> `%s`" , key,value)
+		}
+		close(resultChan)
+	}()
 
-	intValue,_ := value.(int)
-
-	
-	intValue+=byCount
-
-	db.DBStorage[key] = intValue
-
-	return intValue,nil
+	return resultChan
 }
