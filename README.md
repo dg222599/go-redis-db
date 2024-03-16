@@ -9,7 +9,9 @@ Need to have Go installed and , also need ncat like tool for connecting to TCP s
 2.Navigate to the project directory and run.  
 
 
-     ``` go build -o go-redis-db ```
+     ```
+     go build -o go-redis-db 
+     ```
 
 3. Run the exe file using.
 
