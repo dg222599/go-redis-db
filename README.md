@@ -6,12 +6,11 @@ Need to have Go installed and , also need ncat like tool for connecting to TCP s
 
 1.Clone the repo.  
 
-2.Navigate to the project directory and run.  
+2. Navigate to the project directory and run:
 
+   ```bash
+   go build -o go-redis-db
 
-     ```
-     go build -o go-redis-db 
-     ```
 
 3. Run the exe file using.
 
