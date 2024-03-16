@@ -46,8 +46,8 @@ Need to have Go installed and , also need ncat like tool for connecting to TCP s
     
     2. Steps for building the image and running the cotainer.  
 
-        ```  docker build -t redis-server-image:latest .  ```
+        ```docker build -t redis-server-image:latest .```
 
-        ```  docker run -p 9736:9736 redis-server-image:test  ```
+        ```docker run -p 9736:9736 redis-server-image:test```
 
     3. After the server starts successfully on the contianer , use the same steps as listed above with ncat for interacting with the key-value db server.
