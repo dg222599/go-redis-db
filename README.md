@@ -40,3 +40,14 @@ Need to have Go installed and , also need ncat like tool for connecting to TCP s
   7. To close the connection use   ``` CTRL + C ```   or  ``` EXIT ```  command.
      
 
+ # Usage with Docker
+
+    1. Current repo version has DockerFile in it  , if Docker is installed in the user system then can build the image and run the container directly .
+    
+    2. Steps for building the image and running the cotainer.  
+
+    ```  docker build -t redis-server-image:latest .  ```
+
+    ```  docker run -p 9736:9736 redis-server-image:test  ```
+
+    3. After the server starts successfully on the contianer , use the same steps as listed above with ncat for interacting with the key-value db server.

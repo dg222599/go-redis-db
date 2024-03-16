@@ -69,6 +69,15 @@ func HandleNewConnection(conn net.Conn ,operationDB command.DBOperation) {
 	writer := bufio.NewWriter(conn)
 	dbIdx:=0
 
+	exitSignal := make(chan os.Signal,1)
+	signal.Notify(exitSignal,syscall.SIGINT,syscall.SIGTERM)
+
+	go func(){
+		<-exitSignal
+		
+		os.Exit(1)
+	}()
+
 	for {
 		if dbIdx > 0 {
 			fmt.Fprintf(writer, "[%d]$", dbIdx)
@@ -87,9 +96,14 @@ func HandleNewConnection(conn net.Conn ,operationDB command.DBOperation) {
 		if command.Name == "HELP" {
 			showAllCommands(writer)
 		} else if command.Name == "EXIT" {
-			fmt.Fprintf(writer,"It seems you have terminated the operations...bye!!")
-			os.Exit(1)
+			fmt.Fprintf(writer,"Writer It seems you have terminated the operations...bye!!")
+			writer.Flush()
+			exitSignal <- os.Interrupt
+			conn.Close()
+			return
+
 		}
+		
 
 		var result interface{}
 		dbIdx,result  =  operationDB.Execute(dbIdx,command)
@@ -179,6 +193,8 @@ func HandleTermination() {
 		os.Exit(1)
 	}()
 }
+
+
 
 func showAllCommands(writer *bufio.Writer) {
 	//printing all the available commands using this
